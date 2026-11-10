@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2e5c4f">
+<meta name="apple-mobile-web-app-title" content="Lernfokus">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Lernfokus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: eine ruhige Spalte, nur Timer und ein Knopf im Blick. Farbe zeigt die Phase: Kiefer = Lernen, Ocker = Pause. */
+:root{
+  --bg:#f2f3ef; --surface:#fafaf7; --ink:#1c2420; --muted:#6a746e; --line:#dce0da;
+  --learn:#2e5c4f; --pause:#b07d33; --learn-soft:#2e5c4f14; --pause-soft:#b07d3317;
+  --phase:var(--learn); --phase-soft:var(--learn-soft);
+  --f-display:"Instrument Serif", Georgia, "Times New Roman", serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131715; --surface:#1a1f1c; --ink:#e4e9e5; --muted:#8d9791; --line:#2a312d;
+  --learn:#86bba8; --pause:#dcaa62; --learn-soft:#86bba81a; --pause-soft:#dcaa621c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131715; --surface:#1a1f1c; --ink:#e4e9e5; --muted:#8d9791; --line:#2a312d;
+  --learn:#86bba8; --pause:#dcaa62; --learn-soft:#86bba81a; --pause-soft:#dcaa621c; color-scheme:dark}
+body[data-phase="pause"]{--phase:var(--pause); --phase-soft:var(--pause-soft)}
+
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  transition:background-color .6s}
+.wrap{max-width:560px;margin:0 auto;padding-block:28px 48px;display:flex;flex-direction:column;gap:28px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.brand{font-family:var(--f-display);font-size:1.5rem;letter-spacing:.01em}
+.brand i{color:var(--learn)}
+.top small{color:var(--muted);font-size:.85rem}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--phase);outline-offset:3px}
+.label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+
+/* Setup */
+.setup{display:flex;flex-direction:column;gap:32px;padding-top:4vh}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(2rem,6vw,2.7rem);line-height:1.1;margin:0;text-wrap:balance}
+h1 em{color:var(--learn)}
+.stepper{display:flex;align-items:center;gap:20px}
+.stepper button{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.4rem;line-height:1}
+.stepper button:hover{border-color:var(--learn)}
+.stepper output{font-size:4.5rem;font-weight:300;min-width:2ch;text-align:center;line-height:1}
+.stepper .unit{color:var(--muted)}
+.dots-preview{display:flex;flex-wrap:wrap;gap:8px;min-height:12px}
+.dots-preview span{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--learn)}
+.cfg{display:flex;flex-wrap:wrap;gap:12px 28px;color:var(--muted);font-size:.95rem}
+.cfg label{display:flex;align-items:center;gap:8px}
+.cfg input{width:3.4em;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;text-align:center}
+.primary{align-self:flex-start;border:0;border-radius:999px;background:var(--phase);color:var(--bg);padding:14px 30px;font-weight:600;font-size:1rem;transition:transform .15s, background-color .4s}
+.primary:hover{transform:translateY(-1px)}
+.textbtn{background:none;border:0;padding:4px 0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+.textbtn:hover{color:var(--ink)}
+.hint{color:var(--muted);font-size:.85rem;margin:0}
+
+/* Lauf */
+.run{display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:2vh;text-align:center}
+.phase-name{font-family:var(--f-display);font-size:2rem;color:var(--phase);line-height:1;transition:color .4s}
+.ring{position:relative;width:min(300px,78vw);aspect-ratio:1;max-width:100%}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{stroke:var(--line)}
+.ring .bar{stroke:var(--phase);transition:stroke-dashoffset .3s linear, stroke .4s}
+.ring .inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.clock{font-size:clamp(3.2rem,15vw,4.4rem);font-weight:300;letter-spacing:-.02em;line-height:1}
+.clock.over{color:var(--phase)}
+.sub{color:var(--muted);font-size:.9rem;min-height:1.4em}
+.nudge{min-height:1.5em;color:var(--phase);font-size:.95rem;margin:0;transition:opacity .3s}
+.run .primary{align-self:center;padding:16px 36px;font-size:1.05rem}
+.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;max-width:320px}
+.dots span{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--learn)}
+.dots span.done{background:var(--learn)}
+.dots span.now{animation:pulse 2s ease-in-out infinite}
+.dots span.extra{border-style:dashed}
+@keyframes pulse{50%{background:var(--learn-soft);transform:scale(1.25)}}
+.totals{display:flex;gap:24px;color:var(--muted);font-size:.9rem;flex-wrap:wrap;justify-content:center}
+.totals b{color:var(--ink);font-weight:500}
+.kbd{font-size:.78rem;color:var(--muted)}
+.kbd kbd{font:inherit;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+
+/* Bestätigung */
+.confirm{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;text-align:left;width:100%}
+.confirm p{margin:0}
+.row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ghost{border:1px solid var(--line);background:none;border-radius:999px;padding:10px 20px}
+
+/* Auswertung */
+.report{display:flex;flex-direction:column;gap:30px}
+.report h1{font-size:clamp(1.9rem,5.5vw,2.4rem)}
+.headline-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.headline-stats div{background:var(--surface);padding:16px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.headline-stats strong{font-size:1.6rem;font-weight:400;line-height:1.2}
+.headline-stats .learnc{color:var(--learn)} .headline-stats .pausec{color:var(--pause)}
+section{display:flex;flex-direction:column;gap:12px}
+h2{font-family:var(--f-display);font-weight:400;font-size:1.35rem;margin:0}
+.chartbox{overflow-x:auto}
+.chartbox svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:18px;font-size:.82rem;color:var(--muted);flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+dl.facts{display:grid;grid-template-columns:1fr auto;margin:0;border-top:1px solid var(--line)}
+dl.facts dt,dl.facts dd{padding:10px 0;border-bottom:1px solid var(--line);margin:0}
+dl.facts dt{color:var(--muted)}
+dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
+.feedback{font-size:1.08rem;line-height:1.65;max-width:62ch;margin:0;padding-left:16px;border-left:2px solid var(--learn)}
+.feedback p{margin:0 0 .7em}
+.feedback p:last-child{margin:0}
+.sample-note{font-size:.82rem;color:var(--pause)}
+.popup{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fade .3s ease-out}
+.popup .card{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--phase);border-radius:16px;padding:26px 24px;max-width:380px;width:100%;display:flex;flex-direction:column;gap:14px;text-align:left;box-shadow:0 20px 50px -20px #0004}
+.popup h3{font-family:var(--f-display);font-weight:400;font-size:1.8rem;margin:0;color:var(--phase);line-height:1.1}
+.popup p{margin:0;color:var(--muted)}
+.popup .primary{align-self:stretch;text-align:center}
+@keyframes fade{from{opacity:0}}
+@media (max-width:420px){.headline-stats strong{font-size:1.3rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Lern<i>fokus</i></div>
+    <small id="dateline"></small>
+  </header>
+
+  <!-- Setup -->
+  <main id="vSetup" class="setup">
+    <h1>Wie viele <em>Pomodori</em> schaffst du heute?</h1>
+    <div class="stepper">
+      <button id="minus" aria-label="Weniger">−</button>
+      <output id="target" class="num">4</output>
+      <button id="plus" aria-label="Mehr">+</button>
+      <span class="unit" id="targetHint">≈ 1 h 55 min</span>
+    </div>
+    <div class="dots-preview" id="preview"></div>
+    <div class="cfg">
+      <label for="learnMin">Lernen <input id="learnMin" type="number" min="5" max="90" value="25" inputmode="numeric"> min</label>
+      <label for="pauseMin">Pause <input id="pauseMin" type="number" min="1" max="30" value="5" inputmode="numeric"> min</label>
+    </div>
+    <button class="primary" id="startBtn">Lerneinheit starten</button>
+    <p class="hint">Die Zeiten sind Vorschläge. Du wechselst die Phase selbst, wenn du wirklich Pause machst oder wieder anfängst. <button class="textbtn" id="sampleBtn">Beispiel-Auswertung ansehen</button></p>
+  </main>
+
+  <!-- Laufende Session -->
+  <main id="vRun" class="run" hidden>
+    <div class="label" id="pomoLabel">Pomodoro 1 von 4</div>
+    <div class="phase-name" id="phaseName">Lernen</div>
+    <div class="ring">
+      <svg viewBox="0 0 260 260" aria-hidden="true">
+        <circle class="track" cx="130" cy="130" r="120" fill="none" stroke-width="3"/>
+        <circle class="bar" id="ringBar" cx="130" cy="130" r="120" fill="none" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <div class="inner">
+        <div class="clock num" id="clock">25:00</div>
+        <div class="sub num" id="sub">von 25 min</div>
+      </div>
+    </div>
+    <p class="nudge" id="nudge"></p>
+    <button class="primary" id="switchBtn">Pause machen</button>
+    <div class="dots" id="dots"></div>
+    <div class="totals num"><span>Gelernt <b id="tLearn">0 min</b></span><span>Pause <b id="tPause">0 min</b></span></div>
+    <div class="confirm" id="confirm" hidden>
+      <p><strong>Session beenden?</strong> Danach siehst du deine Auswertung.</p>
+      <div class="row"><button class="primary" id="confirmYes">Beenden</button><button class="ghost" id="confirmNo">Weiterlernen</button></div>
+    </div>
+    <div class="confirm" id="resetConfirm" hidden>
+      <p><strong>Pomodoro neu starten?</strong> <span id="resetText"></span></p>
+      <div class="row"><button class="primary" id="resetYes">Neu starten</button><button class="ghost" id="resetNo">Abbrechen</button></div>
+    </div>
+    <div class="row" style="justify-content:center;gap:24px">
+      <button class="textbtn" id="resetBtn">Pomodoro neu starten</button>
+      <button class="textbtn" id="endBtn">Session beenden</button>
+    </div>
+    <div class="kbd"><kbd>Leertaste</kbd> wechselt die Phase</div>
+    <div class="popup" id="popup" hidden role="alertdialog" aria-labelledby="popTitle">
+      <div class="card">
+        <h3 id="popTitle">Zeit für eine Pause</h3>
+        <p id="popText"></p>
+        <button class="primary" id="popGo">Pause machen</button>
+        <button class="textbtn" id="popLater">Noch kurz weiter</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Auswertung -->
+  <main id="vReport" class="report" hidden>
+    <div>
+      <div class="label" id="repDate"></div>
+      <h1 id="repTitle"></h1>
+      <div class="sample-note" id="sampleNote" hidden>Beispieldaten, keine echte Session.</div>
+    </div>
+    <div class="headline-stats num">
+      <div><span class="label">Gelernt</span><strong class="learnc" id="sLearn"></strong></div>
+      <div><span class="label">Pause</span><strong class="pausec" id="sPause"></strong></div>
+      <div><span class="label">Fokusanteil</span><strong id="sRatio"></strong></div>
+    </div>
+    <section>
+      <h2>Feedback</h2>
+      <div class="feedback" id="feedback"></div>
+    </section>
+    <section>
+      <h2>Verlauf</h2>
+      <div class="chartbox" id="timeline"></div>
+      <div class="legend"><span style="--c:var(--learn)">Lernen</span><span style="--c:var(--pause)">Pause</span></div>
+    </section>
+    <section>
+      <h2>Lernblöcke</h2>
+      <div class="chartbox" id="blocks"></div>
+      <div class="legend"><span style="--c:var(--learn)">Tatsächlich gelernt</span><span style="--c:var(--muted)" id="planLegend">Geplant</span></div>
+    </section>
+    <section>
+      <h2>Details</h2>
+      <dl class="facts num" id="facts"></dl>
+    </section>
+    <button class="primary" id="newBtn">Neue Session</button>
+  </main>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const KEY='lernfokus-session';
+const C=2*Math.PI*120;
+let S=null, timer=null, audio=null, wake=null;
+
+/* ---------- Hilfsfunktionen ---------- */
+const pad=n=>String(n).padStart(2,'0');
+function clock(ms){const s=Math.floor(Math.abs(ms)/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+pad(m):pad(m))+':'+pad(s%60)}
+function dur(ms){const m=Math.round(ms/60000);if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h+' h'+(r?' '+r+' min':'')}
+function hm(t){const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const clear=()=>{try{localStorage.removeItem(KEY)}catch(e){}};
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+const planned=type=>(type==='learn'?S.learnMin:S.pauseMin)*60000;
+function show(v){['vSetup','vRun','vReport'].forEach(x=>$(x).hidden=x!==v)}
+
+$('dateline').textContent=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+
+/* ---------- Setup ---------- */
+let target=4;
+function renderSetup(){
+  $('target').textContent=target;
+  const lm=+$('learnMin').value||25,pm=+$('pauseMin').value||5;
+  const total=(target*lm+(target-1)*pm)*60000;
+  $('targetHint').innerHTML='≈ '+dur(total)+'<br>fertig um ca. <b style="color:var(--ink);font-weight:500">'+hm(Date.now()+total)+' Uhr</b>';
+  $('preview').innerHTML='<span></span>'.repeat(target);
+}
+$('minus').onclick=()=>{target=Math.max(1,target-1);renderSetup()};
+$('plus').onclick=()=>{target=Math.min(16,target+1);renderSetup()};
+$('learnMin').oninput=$('pauseMin').oninput=renderSetup;
+renderSetup();
+setInterval(()=>{if(!$('vSetup').hidden)renderSetup()},15000);
+
+$('startBtn').onclick=()=>{
+  const lm=Math.min(90,Math.max(5,+$('learnMin').value||25)),pm=Math.min(30,Math.max(1,+$('pauseMin').value||5));
+  const now=Date.now();
+  S={target,learnMin:lm,pauseMin:pm,start:now,phases:[],cur:{type:'learn',start:now,notified:false}};
+  save();initAudio();keepAwake();startRun();
+  try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission().catch(()=>{})}catch(e){}
+};
+
+/* ---------- Lauf ---------- */
+function startRun(){show('vRun');$('confirm').hidden=true;$('resetConfirm').hidden=true;tick();clearInterval(timer);timer=setInterval(tick,250)}
+function qualifies(p){return p.type==='learn'&&(p.end-p.start)>=planned('learn')*0.5}
+
+function tick(){
+  if(!S)return;
+  const now=Date.now(),c=S.cur,el=now-c.start,pl=planned(c.type),rem=pl-el,over=rem<0;
+  document.body.dataset.phase=c.type;
+  $('phaseName').textContent=c.type==='learn'?'Lernen':'Pause';
+  $('clock').textContent=(over?'+':'')+clock(over?-rem:rem+999);
+  $('clock').classList.toggle('over',over);
+  $('sub').textContent=over?'über die geplanten '+(pl/60000)+' min':'von '+(pl/60000)+' min';
+  $('ringBar').style.strokeDasharray=C;
+  $('ringBar').style.strokeDashoffset=over?0:C*(1-el/pl);
+  $('switchBtn').textContent=c.type==='learn'?'Pause machen':'Weiter lernen';
+  $('resetBtn').hidden=c.type!=='learn';
+  if(!$('resetConfirm').hidden)$('resetText').textContent='Die bisherigen '+dur(el)+' zählen dann als Pause, und der Timer beginnt wieder bei '+S.learnMin+' min.';
+
+  const done=S.phases.filter(qualifies).length;
+  const learnBlocks=S.phases.filter(p=>p.type==='learn').length+(c.type==='learn'?1:0);
+  $('pomoLabel').textContent=c.type==='learn'?'Pomodoro '+learnBlocks+' von '+S.target:(done>=S.target?'Ziel erreicht · '+done+' von '+S.target:'Nach Pomodoro '+(learnBlocks)+' von '+S.target);
+  let nudge='';
+  if(over&&c.type==='learn')nudge='Zeit für eine Pause, wenn du an einem guten Punkt bist.';
+  else if(over)nudge='Pause ist vorbei. Sag Bescheid, sobald du wieder lernst.';
+  else if(c.type==='pause'&&done>=S.target)nudge='Du hast dein Ziel geschafft. Weiterlernen oder beenden?';
+  $('nudge').textContent=nudge;
+  if(over&&!c.notified){c.notified=true;save();chime(c.type);openPopup(c.type)}
+
+  // Punkte
+  const n=Math.max(S.target,done+(c.type==='learn'?1:0));
+  let html='';
+  for(let i=0;i<n;i++){
+    const cls=[i<done?'done':'',(i===done&&c.type==='learn')?'now':'',i>=S.target?'extra':''].join(' ').trim();
+    html+='<span'+(cls?' class="'+cls+'"':'')+'></span>';
+  }
+  if($('dots').innerHTML!==html)$('dots').innerHTML=html;
+
+  let L=0,P=0;S.phases.forEach(p=>{p.type==='learn'?L+=p.end-p.start:P+=p.end-p.start});
+  c.type==='learn'?L+=el:P+=el;
+  $('tLearn').textContent=dur(L);$('tPause').textContent=dur(P);
+  const flash=!$('popup').hidden&&Math.floor(now/1000)%2===0;
+  document.title=flash?(c.type==='learn'?'● Pause machen!':'● Weiter lernen!'):(over?'+':'')+clock(over?-rem:rem+999)+' · '+(c.type==='learn'?'Lernen':'Pause');
+}
+
+function openPopup(type){
+  const learn=type==='learn';
+  $('popTitle').textContent=learn?'Zeit für eine Pause':'Pause ist vorbei';
+  $('popText').textContent=learn?S.learnMin+' Minuten Lernen sind um. Mach Pause, sobald du an einem guten Punkt bist.':'Deine '+S.pauseMin+' Minuten Pause sind um. Bereit für den nächsten Pomodoro?';
+  $('popGo').textContent=learn?'Pause machen':'Weiter lernen';
+  $('popLater').textContent=learn?'Noch kurz weiterlernen':'Noch kurz Pause';
+  $('popup').hidden=false;$('popGo').focus();
+  try{if(document.hidden&&window.Notification&&Notification.permission==='granted')new Notification('Lernfokus',{body:$('popTitle').textContent+'. '+$('popText').textContent})}catch(e){}
+}
+function closePopup(){$('popup').hidden=true}
+$('popGo').onclick=()=>{closePopup();switchPhase()};
+$('popLater').onclick=closePopup;
+
+function switchPhase(){
+  if(!S)return;
+  closePopup();$('resetConfirm').hidden=true;
+  const now=Date.now();
+  S.phases.push({type:S.cur.type,start:S.cur.start,end:now});
+  S.cur={type:S.cur.type==='learn'?'pause':'learn',start:now,notified:false};
+  save();tick();
+}
+$('switchBtn').onclick=switchPhase;
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!$('vRun').hidden&&!/INPUT|BUTTON/.test(e.target.tagName)){e.preventDefault();switchPhase()}
+});
+$('resetBtn').onclick=()=>{$('confirm').hidden=true;$('resetConfirm').hidden=false;tick();$('resetYes').focus()};
+$('resetNo').onclick=()=>{$('resetConfirm').hidden=true};
+$('resetYes').onclick=()=>{
+  if(!S||S.cur.type!=='learn')return;
+  const now=Date.now(),prev=S.phases[S.phases.length-1];
+  if(prev&&prev.type==='pause'&&prev.end===S.cur.start){prev.end=now;prev.reset=true}
+  else S.phases.push({type:'pause',start:S.cur.start,end:now,reset:true});
+  S.resets=(S.resets||0)+1;
+  S.cur={type:'learn',start:now,notified:false};
+  $('resetConfirm').hidden=true;closePopup();save();tick();
+  $('nudge').textContent='Neuer Versuch. Die Zeit davor zählt als Pause.';
+};
+$('endBtn').onclick=()=>{$('resetConfirm').hidden=true;$('confirm').hidden=false;$('confirmYes').focus()};
+$('confirmNo').onclick=()=>{$('confirm').hidden=true};
+$('confirmYes').onclick=()=>{
+  const now=Date.now();
+  S.phases.push({type:S.cur.type,start:S.cur.start,end:now});
+  S.end=now;clearInterval(timer);clear();closePopup();
+  document.title='Lernfokus';delete document.body.dataset.phase;
+  report(S,false);
+};
+
+/* ---------- Ton & Bildschirm ---------- */
+function initAudio(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){audio=null}}
+function chime(type){
+  if(!audio)return;
+  const notes=type==='learn'?[659,523]:[523,659];
+  notes.forEach((f,i)=>{try{
+    const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime+i*.35;
+    o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+1.4);
+    o.connect(g).connect(audio.destination);o.start(t);o.stop(t+1.5);
+  }catch(e){}});
+}
+async function keepAwake(){try{wake=await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S&&!S.end)keepAwake()});
+
+/* ---------- Auswertung ---------- */
+function report(D,sample){
+  S=null;show('vReport');window.scrollTo(0,0);
+  $('sampleNote').hidden=!sample;
+  const lp=D.learnMin*60000,pp=D.pauseMin*60000;
+  const learns=D.phases.filter(p=>p.type==='learn'&&p.end-p.start>=30000);
+  const pauses=D.phases.filter(p=>p.type==='pause'&&p.end-p.start>=30000);
+  const sum=a=>a.reduce((s,p)=>s+(p.end-p.start),0);
+  const L=sum(learns),P=sum(pauses),T=L+P||1;
+  const done=learns.filter(p=>p.end-p.start>=lp*.5).length;
+  const ratio=L/T;
+  const avgL=learns.length?L/learns.length:0, avgP=pauses.length?P/pauses.length:0;
+  const longL=Math.max(0,...learns.map(p=>p.end-p.start)), longP=Math.max(0,...pauses.map(p=>p.end-p.start));
+  const overP=pauses.filter(p=>p.end-p.start>pp*1.2).length;
+  const extL=learns.filter(p=>p.end-p.start>lp*1.2).length;
+  const equiv=L/lp;
+
+  $('repDate').textContent=new Date(D.start).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})+' · '+hm(D.start)+'–'+hm(D.end);
+  $('repTitle').textContent=done>=D.target?'Ziel geschafft: '+done+' von '+D.target+' Pomodori':done+' von '+D.target+' Pomodori';
+  $('sLearn').textContent=dur(L);$('sPause').textContent=dur(P);$('sRatio').textContent=Math.round(ratio*100)+' %';
+
+  // Feedback
+  const f=[];
+  if(done>=D.target+1)f.push('Du hast dein Ziel nicht nur erreicht, sondern mit '+done+' Pomodori übertroffen. Stark.');
+  else if(done>=D.target)f.push('Ziel erreicht. Du hast dir '+D.target+' Pomodori vorgenommen und genau das durchgezogen.');
+  else if(done>=D.target*.6)f.push('Knapp dran: '+done+' von '+D.target+' Pomodori. Das ist eine solide Session, auch wenn das Ziel diesmal etwas zu hoch lag.');
+  else f.push(done+' von '+D.target+' Pomodori. Kein Grund zur Sorge, jeder Block zählt. Setz dir beim nächsten Mal vielleicht ein kleineres Ziel, das du sicher schaffst.');
+  if(ratio>=.8)f.push('Mit '+Math.round(ratio*100)+' % Lernzeit warst du sehr fokussiert.');
+  else if(ratio>=.65)f.push('Dein Verhältnis von Lernen zu Pause ist ausgewogen.');
+  else f.push('Die Pausen haben gut ein Drittel der Zeit oder mehr ausgemacht. Das kostet Schwung.');
+  if(pauses.length&&avgP>pp*1.5)f.push('Deine Pausen waren im Schnitt '+dur(avgP)+' lang, geplant waren '+D.pauseMin+' min. Steh in der Pause lieber kurz auf und bleib vom Handy weg, dann fällt der Wiedereinstieg leichter.');
+  else if(pauses.length&&overP===0)f.push('Deine Pausen hast du diszipliniert eingehalten.');
+  if(learns.length&&extL>=Math.ceil(learns.length/2))f.push('In '+extL+' von '+learns.length+' Blöcken hast du deutlich länger gelernt als geplant. Wenn du im Flow bist, ist das gut so. Achte nur darauf, dass die Pausen nicht ganz wegfallen.');
+  else if(learns.length&&avgL<lp*.75)f.push('Deine Lernblöcke waren mit durchschnittlich '+dur(avgL)+' eher kurz. Versuch, Ablenkungen vorher wegzuräumen, damit du die vollen '+D.learnMin+' min durchhältst.');
+  const R=D.resets||0;
+  if(R>=2)f.push('Du hast '+R+' Pomodori neu gestartet. Wenn dich oft etwas rausreißt, leg das Handy außer Reichweite und sag Leuten in der Nähe kurz Bescheid, dass du gerade lernst.');
+  $('feedback').innerHTML=f.map(t=>'<p>'+t+'</p>').join('');
+
+  // Verlauf
+  const W=560,H=60,span=D.end-D.start||1;
+  let tl='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Zeitverlauf der Session">';
+  D.phases.forEach(p=>{
+    const x=(p.start-D.start)/span*W,w=Math.max(1,(p.end-p.start)/span*W-1.5);
+    tl+='<rect x="'+x.toFixed(1)+'" y="6" width="'+w.toFixed(1)+'" height="26" rx="3" fill="var(--'+(p.type==='learn'?'learn':'pause')+')"/>';
+  });
+  const ticks=[];const step=span>3*3600000?3600000:span>90*60000?1800000:900000;
+  for(let t=Math.ceil(D.start/step)*step;t<D.end;t+=step)ticks.push(t);
+  tl+='<text x="0" y="52" font-size="11" fill="var(--muted)" font-family="Figtree,sans-serif">'+hm(D.start)+'</text>';
+  tl+='<text x="'+W+'" y="52" font-size="11" fill="var(--muted)" text-anchor="end" font-family="Figtree,sans-serif">'+hm(D.end)+'</text>';
+  ticks.forEach(t=>{const x=(t-D.start)/span*W;if(x>45&&x<W-45)tl+='<line x1="'+x+'" x2="'+x+'" y1="34" y2="39" stroke="var(--muted)"/><text x="'+x+'" y="52" font-size="11" fill="var(--muted)" text-anchor="middle" font-family="Figtree,sans-serif">'+hm(t)+'</text>'});
+  $('timeline').innerHTML=tl+'</svg>';
+
+  // Lernblöcke
+  const bh=200,pl=34,pb=24,n=learns.length||1,cw=(W-pl)/n;
+  const maxM=Math.max(D.learnMin*1.25,...learns.map(p=>(p.end-p.start)/60000));
+  const top=Math.ceil(maxM/10)*10, y=v=>8+(bh-8-pb)*(1-v/top);
+  let bs='<svg viewBox="0 0 '+W+' '+bh+'" role="img" aria-label="Dauer jedes Lernblocks">';
+  for(let v=0;v<=top;v+=10){bs+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(pl-6)+'" y="'+(y(v)+4)+'" font-size="11" fill="var(--muted)" text-anchor="end" font-family="Figtree,sans-serif">'+v+'</text>'}
+  learns.forEach((p,i)=>{
+    const m=(p.end-p.start)/60000,bw=Math.min(36,cw*.6),x=pl+cw*i+(cw-bw)/2;
+    bs+='<rect x="'+x.toFixed(1)+'" y="'+y(m).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(y(0)-y(m)).toFixed(1)+'" rx="3" fill="var(--learn)" opacity="'+(m>=D.learnMin*.5?1:.45)+'"/>';
+    bs+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(bh-6)+'" font-size="11" fill="var(--muted)" text-anchor="middle" font-family="Figtree,sans-serif">'+(i+1)+'</text>';
+  });
+  bs+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(D.learnMin)+'" y2="'+y(D.learnMin)+'" stroke="var(--ink)" stroke-dasharray="4 4" opacity=".55"/>';
+  $('blocks').innerHTML=bs+'</svg>';
+  $('planLegend').textContent='Geplant ('+D.learnMin+' min, gestrichelt), Achse in Minuten';
+
+  const facts=[
+    ['Gesamtdauer',dur(D.end-D.start)],
+    ['Pomodori geschafft',done+' von '+D.target],
+    ['Lernzeit in Pomodori umgerechnet',equiv.toFixed(1).replace('.',',')],
+    ['Ø Lernblock',dur(avgL)+' (geplant '+D.learnMin+' min)'],
+    ['Längster Lernblock',dur(longL)],
+    ['Ø Pause',pauses.length?dur(avgP)+' (geplant '+D.pauseMin+' min)':'keine'],
+    ['Längste Pause',pauses.length?dur(longP):'–'],
+    ['Pausen länger als geplant',pauses.length?overP+' von '+pauses.length:'–'],
+    ['Neu gestartete Pomodori',String(D.resets||0)],
+  ];
+  $('facts').innerHTML=facts.map(([a,b])=>'<dt>'+a+'</dt><dd>'+b+'</dd>').join('');
+}
+
+$('newBtn').onclick=()=>{S=null;show('vSetup');renderSetup();window.scrollTo(0,0)};
+$('sampleBtn').onclick=()=>{
+  const m=60000,st=new Date();st.setHours(14,10,0,0);let t=st.getTime();
+  const seq=[['learn',22],['pause',5],['learn',27],['pause',9],['learn',20],['pause',6],['learn',31],['pause',14],['learn',18],['pause',5],['learn',21]];
+  const phases=seq.map(([type,min])=>{const p={type,start:t,end:t+min*m};t+=min*m;return p});
+  report({target:6,learnMin:20,pauseMin:5,start:st.getTime(),end:t,phases},true);
+};
+
+/* ---------- Wiederaufnahme nach Neuladen ---------- */
+const saved=load();
+if(saved&&saved.cur&&!saved.end){S=saved;startRun();if(S.cur.notified&&Date.now()-S.cur.start>planned(S.cur.type))openPopup(S.cur.type)}
+})();
+</script>
+<script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
