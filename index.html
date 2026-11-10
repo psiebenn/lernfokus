@@ -157,7 +157,8 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
 /* Statistik */
 .stats{display:flex;flex-direction:column;gap:30px}
 .stats-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px;border:1px solid var(--line);border-radius:20px;padding:3px;background:var(--surface);max-width:100%}
+.seg button{white-space:nowrap}
 .seg button{border:0;background:none;padding:6px 14px;border-radius:999px;font-size:.88rem;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -270,6 +271,9 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
     <div class="stats-head">
       <h1>Statistik</h1>
       <div class="seg" role="group" aria-label="Zeitraum">
+        <button data-range="today" aria-pressed="false">Heute</button>
+        <button data-range="week" aria-pressed="false">Diese Woche</button>
+        <button data-range="14d" aria-pressed="false">14 Tage</button>
         <button data-range="4w" aria-pressed="true">4 Wochen</button>
         <button data-range="12w" aria-pressed="false">12 Wochen</button>
         <button data-range="all" aria-pressed="false">Alles</button>
@@ -701,7 +705,7 @@ $('importFile').onchange=async e=>{
 
 /* ---------- Statistik ---------- */
 let range='4w',statsSample=false;
-try{const r=localStorage.getItem('lernfokus-range');if(['4w','12w','all'].includes(r))range=r}catch(e){}
+try{const r=localStorage.getItem('lernfokus-range');if(['today','week','14d','4w','12w','all'].includes(r))range=r}catch(e){}
 document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{range=b.dataset.range;try{localStorage.setItem('lernfokus-range',range)}catch(e){}renderStats()});
 $('navTimer').onclick=()=>{show('vSetup');renderSetup();window.scrollTo(0,0)};
 $('navStats').onclick=()=>{show('vStats');renderStats();window.scrollTo(0,0)};
@@ -833,7 +837,8 @@ function renderStats(){
   }
   const now=Date.now(),today=dayStart(now),thisW=weekStart(now);
   const first=Math.min(...all.map(s=>s.start));
-  const from=range==='4w'?addDays(thisW,-21):range==='12w'?addDays(thisW,-77):weekStart(first);
+  const long=['4w','12w','all'].includes(range);
+  const from=range==='today'?today:range==='week'?thisW:range==='14d'?addDays(today,-13):range==='4w'?addDays(thisW,-21):range==='12w'?addDays(thisW,-77):weekStart(first);
   const inR=all.filter(s=>s.start>=from);
   const A=aggregate(inR),G=aggregate(all);
 
@@ -850,7 +855,8 @@ function renderStats(){
 
   let h='';
   if(!inR.length){
-    h+='<div class="empty"><h2>Keine Sessions in diesem Zeitraum</h2><p>In den letzten '+(range==='4w'?'4':'12')+' Wochen hast du keine Session gespeichert. Unter „Alles“ siehst du deine älteren Sessions.</p><button class="ghost small" id="toAll">Alles anzeigen</button></div>';
+    const when={today:'Heute hast du',week:'Diese Woche hast du','14d':'In den letzten 14 Tagen hast du','4w':'In den letzten 4 Wochen hast du','12w':'In den letzten 12 Wochen hast du'}[range];
+    h+='<div class="empty"><h2>Keine Sessions in diesem Zeitraum</h2><p>'+when+' noch keine Session gespeichert. Unter „Alles“ siehst du deine älteren Sessions.</p><div class="row">'+(range==='today'||range==='week'?'<button class="primary small" id="emptyStart">Session starten</button>':'')+'<button class="ghost small" id="toAll">Alles anzeigen</button></div></div>';
   }else{
     let L=0,P=0,done=0;inR.forEach(s=>{const m=summary(s);L+=m.L;P+=m.P;done+=m.done});
     h+='<div class="kpis num">'+
@@ -862,18 +868,32 @@ function renderStats(){
       '<div><span class="label">Lerntage in Folge</span><strong>'+streak+(streak===1?' Tag':' Tage')+'</strong><small>Rekord: '+best+(best===1?' Tag':' Tage')+'</small></div>'+
     '</div>';
 
+    if(range==='today'){
+      const yk=dkey(addDays(today,-1)),tk=dkey(today);
+      const tl=G.day[tk]||0,tp=G.dayP[tk]||0,yl=G.day[yk]||0,yp=G.dayP[yk]||0,tr=tl/((tl+tp)||1),yr=yl/((yl+yp)||1);
+      h+='<section><h2>Heute</h2><div class="compare num">'+
+        '<div><span class="label">Lernzeit</span><strong>'+dur(tl)+delta(tl,yl)+'</strong><small>Gestern: '+(yl?dur(yl):'keine Sessions')+'</small></div>'+
+        '<div><span class="label">Fokusanteil</span><strong>'+(tl?Math.round(tr*100)+' %':'–')+(tl?delta(tr,yl?yr:0,'pct'):'')+'</strong><small>Gestern: '+(yl?Math.round(yr*100)+' %':'keine Sessions')+'</small></div>'+
+      '</div></section>';
+    }else{
     h+='<section><h2>Diese Woche</h2><div class="compare num">'+
       '<div><span class="label">Lernzeit</span><strong>'+dur(wl)+delta(wl,pl)+'</strong><small>Vorwoche: '+(pl?dur(pl):'keine Sessions')+'</small></div>'+
       '<div><span class="label">Fokusanteil</span><strong>'+(wl?Math.round(wr*100)+' %':'–')+(wl?delta(wr,pl?pr:0,'pct'):'')+'</strong><small>Vorwoche: '+(pl?Math.round(pr*100)+' %':'keine Sessions')+'</small></div>'+
     '</div></section>';
+    }
 
     // Wochen
     const nW=Math.round((thisW-from)/(7*DAY))+1,wv=[],wlab=[],wtit=[],fr=[];
     for(let i=0;i<nW;i++){const ws=addDays(from,7*i),l=weekSum(A.day,ws),p=weekSum(A.dayP,ws);wv.push(l);wlab.push('KW '+isoWeek(ws));wtit.push('KW '+isoWeek(ws)+' ('+new Date(ws).toLocaleDateString('de-DE',{day:'numeric',month:'numeric'})+')');fr.push(l?l/(l+p):null)}
-    h+='<section><h2>Lernzeit pro Woche</h2><div class="chartbox">'+barSVG({vals:wv,labels:wlab,titles:wtit,every:Math.max(1,Math.ceil(nW/Math.floor(chartW/50))),hi:nW-1,tops:nW<=Math.floor(chartW/40),aria:'Lernzeit pro Woche'})+'</div><p class="note">Die letzte Woche läuft noch.</p></section>';
+    if(long)h+='<section><h2>Lernzeit pro Woche</h2><div class="chartbox">'+barSVG({vals:wv,labels:wlab,titles:wtit,every:Math.max(1,Math.ceil(nW/Math.floor(chartW/50))),hi:nW-1,tops:nW<=Math.floor(chartW/40),aria:'Lernzeit pro Woche'})+'</div><p class="note">Die letzte Woche läuft noch.</p></section>';
 
     // Tage
-    if(range==='4w'){
+    if(range==='week'||range==='14d'){
+      const n=range==='week'?7:14,dv=[],dl=[],dt=[];let hi=-1;
+      for(let i=0;i<n;i++){const t2=addDays(from,i),dd=new Date(t2);dv.push(t2>today?0:(A.day[dkey(t2)]||0));if(t2===today)hi=i;dl.push(range==='week'?WDS[i]:dd.getDate()+'.');dt.push(dd.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'}))}
+      h+='<section><h2>Lernzeit pro Tag</h2><div class="chartbox">'+barSVG({vals:dv,labels:dl,titles:dt,H:160,hi,every:range==='14d'&&chartW<420?2:1,tops:(chartW-52)/n>=36,aria:'Lernzeit pro Tag'})+'</div>'+(range==='14d'?'<p class="note">Fett markiert ist heute.</p>':'')+'</section>';
+    }else if(range==='today'){
+    }else if(range==='4w'){
       const dv=[],dl=[],dt=[];
       for(let i=0;i<28;i++){const t2=addDays(from,i);if(t2>today)break;dv.push(A.day[dkey(t2)]||0);const dd=new Date(t2);dl.push(dd.getDay()===1?dd.getDate()+'.'+(dd.getMonth()+1)+'.':'');dt.push(dd.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'}))}
       h+='<section><h2>Lernzeit pro Tag</h2><div class="chartbox">'+barSVG({vals:dv,labels:dl,titles:dt,H:150,hi:-1,aria:'Lernzeit pro Tag'})+'</div><p class="note">Beschriftet sind die Montage.</p></section>';
@@ -883,21 +903,24 @@ function renderStats(){
 
     // Fokusverlauf
     const withData=fr.filter(v=>v!=null).length;
-    h+='<section><h2>Fokusanteil pro Woche</h2>'+(withData>=2?'<div class="chartbox">'+lineSVG(fr,wlab,nW-1)+'</div><p class="note">Anteil der Lernzeit an Lernen plus Pausen. Wochen ohne Session bleiben leer.</p>':'<p class="note">Der Verlauf erscheint, sobald du in mindestens zwei Wochen gelernt hast.</p>')+'</section>';
+    if(long)h+='<section><h2>Fokusanteil pro Woche</h2>'+(withData>=2?'<div class="chartbox">'+lineSVG(fr,wlab,nW-1)+'</div><p class="note">Anteil der Lernzeit an Lernen plus Pausen. Wochen ohne Session bleiben leer.</p>':'<p class="note">Der Verlauf erscheint, sobald du in mindestens zwei Wochen gelernt hast.</p>')+'</section>';
 
     // Wann
     const tot=A.wd.reduce((a,b)=>a+b,0);
     let topD=0;A.wd.forEach((v,i)=>{if(v>A.wd[topD])topD=i});
     let topH=0,bestSum=-1;for(let i=0;i<=21;i++){const sm=A.hour[i]+A.hour[i+1]+A.hour[i+2];if(sm>bestSum){bestSum=sm;topH=i}}
     const adv=['montags','dienstags','mittwochs','donnerstags','freitags','samstags','sonntags'];
-    h+='<section><h2>Wann du lernst</h2>'+(tot?'<p class="note" style="color:var(--ink)">Am meisten lernst du '+adv[topD]+' und zwischen '+topH+' und '+(topH+3)+' Uhr.</p>':'')+
-      '<div class="sub2"><span class="label">Nach Wochentag</span><div class="chartbox">'+barSVG({vals:A.wd,labels:WDS,titles:WD,H:140,hi:topD,aria:'Lernzeit nach Wochentag'})+'</div></div>'+
+    const showWd=long||range==='14d';
+    const sentence=range==='today'?'Heute hast du am meisten zwischen '+topH+' und '+(topH+3)+' Uhr gelernt.':'Am meisten lernst du '+(showWd?adv[topD]+' und ':'')+'zwischen '+topH+' und '+(topH+3)+' Uhr.';
+    h+='<section><h2>'+(range==='today'?'Über den Tag':'Wann du lernst')+'</h2>'+(tot?'<p class="note" style="color:var(--ink)">'+sentence+'</p>':'')+
+      (showWd?'<div class="sub2"><span class="label">Nach Wochentag</span><div class="chartbox">'+barSVG({vals:A.wd,labels:WDS,titles:WD,H:140,hi:topD,aria:'Lernzeit nach Wochentag'})+'</div></div>':'')+
       '<div class="sub2"><span class="label">Nach Uhrzeit</span><div class="chartbox">'+barSVG({vals:A.hour,labels:A.hour.map((_,i)=>i+' Uhr'),titles:A.hour.map((_,i)=>i+'–'+(i+1)+' Uhr'),H:140,every:chartW<420?4:3,aria:'Lernzeit nach Uhrzeit'})+'</div></div>'+
-      (inR.length<3?'<p class="note">Mit mehr Sessions werden diese Muster aussagekräftiger.</p>':'')+
+      (showWd&&inR.length<3?'<p class="note">Mit mehr Sessions werden diese Muster aussagekräftiger.</p>':'')+
     '</section>';
   }
   body.innerHTML=h;
   const ta=$('toAll');if(ta)ta.onclick=()=>{range='all';renderStats()};
+  const es=$('emptyStart');if(es)es.onclick=()=>{show('vSetup');renderSetup();window.scrollTo(0,0)};
 }
 
 /* ---------- Auswertung ---------- */

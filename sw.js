@@ -1,5 +1,5 @@
 // Netzwerk zuerst, damit Updates sofort ankommen; Cache nur als Offline-Fallback.
-const CACHE='lernfokus-v4';
+const CACHE='lernfokus-v5';
 self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==CACHE).map(n=>caches.delete(n)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
