@@ -153,6 +153,7 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <button class="primary" id="startBtn">Lerneinheit starten</button>
     <p class="hint">Die Zeiten sind Vorschläge. Du wechselst die Phase selbst, wenn du wirklich Pause machst oder wieder anfängst. <button class="textbtn" id="sampleBtn">Beispiel-Auswertung ansehen</button></p>
+    <p class="hint" id="notifRow">Mitteilungen: <span id="notifState">…</span> <button class="textbtn" id="notifTest">Test-Mitteilung senden</button></p>
   </main>
 
   <!-- Laufende Session -->
@@ -271,7 +272,7 @@ $('startBtn').onclick=()=>{
   const now=Date.now();
   S={target,learnMin:lm,pauseMin:pm,start:now,phases:[],cur:{type:'learn',start:now,notified:false}};
   save();initAudio();keepAwake();startRun();
-  try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission().catch(()=>{})}catch(e){}
+  try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission().then(notifStatus).catch(()=>{})}catch(e){}
 };
 
 /* ---------- Lauf ---------- */
@@ -374,8 +375,36 @@ function openPopup(type){
   $('popGo').textContent=learn?'Pause machen':'Weiter lernen';
   $('popLater').textContent=learn?'Noch kurz weiterlernen':'Noch kurz Pause';
   $('popup').hidden=false;$('popGo').focus();
-  try{if(document.hidden&&window.Notification&&Notification.permission==='granted')new Notification('Lernfokus',{body:$('popTitle').textContent+'. '+$('popText').textContent})}catch(e){}
+  if(document.hidden||!document.hasFocus())notify($('popTitle').textContent,$('popText').textContent);
 }
+/* ---------- Mitteilungen ---------- */
+async function notify(title,body){
+  try{
+    if(!window.Notification||Notification.permission!=='granted')return false;
+    const opts={body,tag:'lernfokus-phase',renotify:true,icon:'icons/icon-192.png',badge:'icons/icon-192.png'};
+    const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+    if(reg&&reg.showNotification){await reg.showNotification(title,opts)}else{new Notification(title,opts)}
+    return true;
+  }catch(e){return false}
+}
+function notifStatus(){
+  const st=$('notifState'),btn=$('notifTest');
+  if(!window.Notification){st.textContent='werden von diesem Browser nicht unterstützt.';btn.hidden=true;return}
+  const p=Notification.permission;
+  st.textContent=p==='granted'?'erlaubt.':p==='denied'?'in Chrome blockiert. Klick links neben der Adresse auf das Symbol und erlaube Benachrichtigungen.':'noch nicht erlaubt.';
+  btn.textContent=p==='default'?'Mitteilungen erlauben':'Test-Mitteilung senden';
+  btn.hidden=p==='denied';
+}
+$('notifTest').onclick=async()=>{
+  try{if(Notification.permission==='default')await Notification.requestPermission()}catch(e){}
+  notifStatus();
+  if(Notification.permission==='granted'){
+    const ok=await notify('Lernfokus','Mitteilungen funktionieren. So meldet sich die App, wenn eine Phase vorbei ist.');
+    $('notifState').textContent=ok?'erlaubt. Test gesendet. Falls nichts erscheint, prüfe die macOS-Mitteilungen.':'erlaubt, aber das Senden ist fehlgeschlagen.';
+  }
+};
+notifStatus();
+
 function closePopup(){$('popup').hidden=true}
 $('popGo').onclick=()=>{closePopup();switchPhase()};
 $('popLater').onclick=closePopup;
