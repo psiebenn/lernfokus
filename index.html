@@ -125,6 +125,59 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
 .popup p{margin:0;color:var(--muted)}
 .popup .primary{align-self:stretch;text-align:center}
 @keyframes fade{from{opacity:0}}
+/* Navigation */
+.top{flex-wrap:wrap;align-items:center}
+.brandbox{display:flex;flex-direction:column;gap:0}
+.nav{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.nav button{border:0;background:none;padding:6px 14px;border-radius:999px;font-size:.88rem;color:var(--muted)}
+.nav button:hover{color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--learn);color:var(--bg)}
+
+/* Verlauf */
+.hist{display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid var(--line)}
+.hist-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
+.hlist{display:flex;flex-direction:column}
+.hrow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.hrow:first-child{border-top:1px solid var(--line)}
+.hopen{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:2px 16px;flex-wrap:wrap;background:none;border:0;padding:12px 4px;text-align:left}
+.hopen:hover .hdate{color:var(--learn)}
+.hdate{font-weight:500}
+.hmeta{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.hmeta b{color:var(--ink);font-weight:500}
+.hdel{background:none;border:0;color:var(--muted);padding:0 12px;font-size:1.2rem;line-height:1}
+.hdel:hover{color:var(--pause)}
+.hconfirm{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;padding:10px 4px}
+.hconfirm .row{gap:8px}
+.small{padding:7px 16px!important;font-size:.88rem!important}
+.warn{background:var(--pause)!important}
+.htools{display:flex;gap:6px 20px;flex-wrap:wrap;align-items:center}
+.htools label{cursor:pointer}
+.hempty{color:var(--muted);margin:0}
+
+/* Statistik */
+.stats{display:flex;flex-direction:column;gap:30px}
+.stats-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;font-size:.88rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.kpis div{background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpis strong{font-size:1.45rem;font-weight:400;line-height:1.25}
+.kpis small{color:var(--muted);font-size:.8rem}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.compare div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.compare strong{font-size:1.25rem;font-weight:400}
+.compare small{color:var(--muted)}
+.chip{display:inline-block;font-size:.78rem;padding:1px 8px;border-radius:999px;background:var(--learn-soft);color:var(--learn);font-weight:500;margin-left:6px;vertical-align:2px}
+.chip.down{background:var(--pause-soft);color:var(--pause)}
+.chip.flat{background:var(--line);color:var(--muted)}
+.note{color:var(--muted);font-size:.92rem;margin:0}
+.sub2{display:flex;flex-direction:column;gap:6px}
+.heat svg{width:auto!important;max-width:none}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:26px 22px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+.empty h2{font-size:1.5rem}
+.empty p{margin:0;color:var(--muted);max-width:52ch}
+.banner{font-size:.88rem;color:var(--pause);display:flex;gap:6px 14px;align-items:baseline;flex-wrap:wrap}
 @media (max-width:420px){.headline-stats strong{font-size:1.3rem}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -133,8 +186,11 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
 
 <div class="wrap">
   <header class="top">
-    <div class="brand">Lern<i>fokus</i></div>
-    <small id="dateline"></small>
+    <div class="brandbox"><div class="brand">Lern<i>fokus</i></div><small id="dateline"></small></div>
+    <nav class="nav" id="nav" aria-label="Ansicht">
+      <button id="navTimer" aria-current="page">Timer</button>
+      <button id="navStats">Statistik</button>
+    </nav>
   </header>
 
   <!-- Setup -->
@@ -154,6 +210,17 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
     <button class="primary" id="startBtn">Lerneinheit starten</button>
     <p class="hint">Die Zeiten sind Vorschläge. Du wechselst die Phase selbst, wenn du wirklich Pause machst oder wieder anfängst. <button class="textbtn" id="sampleBtn">Beispiel-Auswertung ansehen</button></p>
     <p class="hint" id="notifRow">Mitteilungen: <span id="notifState">…</span> <button class="textbtn" id="notifTest">Test-Mitteilung senden</button></p>
+
+    <section class="hist" id="histSec" aria-labelledby="histTitle">
+      <div class="hist-head"><h2 id="histTitle">Meine Sessions</h2><span class="label" id="storeMode">In diesem Browser gespeichert</span></div>
+      <div class="hlist" id="histList"></div>
+      <div class="htools">
+        <button class="textbtn" id="exportBtn">Exportieren (JSON)</button>
+        <label class="textbtn" for="importFile">Importieren</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <p class="hint" id="histMsg"></p>
+    </section>
   </main>
 
   <!-- Laufende Session -->
@@ -196,6 +263,20 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
         <button class="textbtn" id="popLater">Noch kurz weiter</button>
       </div>
     </div>
+  </main>
+
+  <!-- Statistik -->
+  <main id="vStats" class="stats" hidden>
+    <div class="stats-head">
+      <h1>Statistik</h1>
+      <div class="seg" role="group" aria-label="Zeitraum">
+        <button data-range="4w" aria-pressed="true">4 Wochen</button>
+        <button data-range="12w" aria-pressed="false">12 Wochen</button>
+        <button data-range="all" aria-pressed="false">Alles</button>
+      </div>
+    </div>
+    <div class="banner" id="sampleBanner" hidden>Beispieldaten, nicht deine Sessions. <button class="textbtn" id="sampleOff">Beispiel ausblenden</button></div>
+    <div class="stats" id="statsBody"></div>
   </main>
 
   <!-- Auswertung -->
@@ -248,7 +329,33 @@ const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const clear=()=>{try{localStorage.removeItem(KEY)}catch(e){}};
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 const planned=type=>(type==='learn'?S.learnMin:S.pauseMin)*60000;
-function show(v){['vSetup','vRun','vReport'].forEach(x=>$(x).hidden=x!==v)}
+function show(v){
+  ['vSetup','vRun','vReport','vStats'].forEach(x=>$(x).hidden=x!==v);
+  $('nav').hidden=v==='vRun';
+  $('navTimer').toggleAttribute('aria-current',v!=='vStats');if(v!=='vStats')$('navTimer').setAttribute('aria-current','page');
+  $('navStats').toggleAttribute('aria-current',v==='vStats');if(v==='vStats')$('navStats').setAttribute('aria-current','page');
+}
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DAY=86400000;
+function dayStart(t){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()}
+function addDays(t,n){const d=new Date(t);d.setDate(d.getDate()+n);return d.getTime()}
+function weekStart(t){const d=new Date(dayStart(t));d.setDate(d.getDate()-(d.getDay()+6)%7);return d.getTime()}
+function dkey(t){const d=new Date(t);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function isoWeek(t){const d=new Date(dayStart(t));d.setDate(d.getDate()+3-(d.getDay()+6)%7);const w1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-w1)/DAY-3+(w1.getDay()+6)%7)/7)}
+function hours1(ms){const h=ms/3600000;return (h>=10?Math.round(h):Math.round(h*10)/10).toString().replace('.',',')+' h'}
+function short(ms){const m=Math.round(ms/60000);return m<60?m+' min':hours1(ms)}
+const WD=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+const WDS=['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+/* Kennzahlen einer Session, gleiche Regeln wie in der Auswertung */
+function summary(D){
+  const lp=D.learnMin*60000;
+  const learns=D.phases.filter(p=>p.type==='learn'&&p.end-p.start>=30000);
+  const pauses=D.phases.filter(p=>p.type==='pause'&&p.end-p.start>=30000);
+  const sum=a=>a.reduce((s,p)=>s+(p.end-p.start),0);
+  const L=sum(learns),P=sum(pauses);
+  return {learns,pauses,L,P,ratio:L/((L+P)||1),done:learns.filter(p=>p.end-p.start>=lp*.5).length};
+}
 
 $('dateline').textContent=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
 
@@ -438,7 +545,12 @@ $('confirmNo').onclick=()=>{$('confirm').hidden=true};
 $('confirmYes').onclick=()=>{
   const now=Date.now();
   S.phases.push({type:S.cur.type,start:S.cur.start,end:now});
-  S.end=now;clearInterval(timer);clear();closePopup();if(pip)pip.close();
+  S.end=now;clearInterval(timer);closePopup();if(pip)pip.close();
+  const rec=cleanSession({start:S.start,end:S.end,target:S.target,learnMin:S.learnMin,pauseMin:S.pauseMin,phases:S.phases,resets:S.resets||0});
+  if(rec&&summary(rec).L>=60000){
+    Store.add(rec).then(r=>{$('histMsg').textContent=r==='none'?'Die Session ließ sich nicht speichern. Exportiere deine Daten, falls der Speicher voll ist.':''});
+  }
+  clear();
   document.title='Lernfokus';delete document.body.dataset.phase;
   report(S,false);
 };
@@ -457,9 +569,341 @@ function chime(type){
 async function keepAwake(){try{wake=await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S&&!S.end)keepAwake()});
 
+/* ---------- Gespeicherte Sessions ---------- */
+const HKEY='lernfokus-history';
+function cleanSession(s){
+  if(!s||typeof s!=='object')return null;
+  const n=v=>typeof v==='number'&&isFinite(v);
+  if(!n(s.start)||!n(s.end)||s.end<s.start||!Array.isArray(s.phases))return null;
+  const phases=s.phases.filter(p=>p&&(p.type==='learn'||p.type==='pause')&&n(p.start)&&n(p.end)&&p.end>=p.start)
+    .map(p=>p.reset?{type:p.type,start:p.start,end:p.end,reset:true}:{type:p.type,start:p.start,end:p.end});
+  if(!phases.length)return null;
+  return {id:'s'+Math.round(s.start),start:s.start,end:s.end,
+    target:n(s.target)&&s.target>0?Math.round(s.target):1,
+    learnMin:n(s.learnMin)&&s.learnMin>0?s.learnMin:25,
+    pauseMin:n(s.pauseMin)&&s.pauseMin>0?s.pauseMin:5,
+    phases,resets:n(s.resets)?Math.max(0,Math.round(s.resets)):0};
+}
+const Store={
+  mode:'local',sessions:[],col:null,dl:null,migrated:false,
+  readLocal(){try{const a=JSON.parse(localStorage.getItem(HKEY));return Array.isArray(a)?a.map(cleanSession).filter(Boolean):[]}catch(e){return []}},
+  writeLocal(a){try{localStorage.setItem(HKEY,JSON.stringify(a));return true}catch(e){return false}},
+  changed(){this.sessions.sort((a,b)=>b.start-a.start);renderHistory();if(!$('vStats').hidden)renderStats()},
+  init(){this.sessions=this.readLocal();this.changed();this.connect()},
+  async connect(){
+    const c=window.claude;if(!c||typeof c.use!=='function')return;
+    try{this.dl=await c.use('downloads')}catch(e){}
+    try{
+      const [db,user]=await Promise.all([c.use('db'),c.use('user')]);
+      if(!db||!user)return;
+      const uid=await user.id();if(!uid)return;
+      this.col=db.collection('data/users/'+uid);
+      const timer=setTimeout(()=>{if(this.mode!=='cloud')$('histMsg').textContent='Die Sessions aus deinem Konto lassen sich gerade nicht laden. Neue Sessions werden in diesem Browser gespeichert.'},10000);
+      this.col.onSnapshot(snap=>{
+        if(snap.metadata.fromCache&&this.mode!=='cloud'&&snap.empty)return;
+        clearTimeout(timer);
+        if($('histMsg').textContent.startsWith('Die Sessions aus deinem Konto'))$('histMsg').textContent='';
+        this.mode='cloud';
+        this.sessions=snap.docs.map(d=>cleanSession(d.data())).filter(Boolean);
+        this.changed();
+        if(!snap.metadata.fromCache)this.migrate();
+      },()=>{clearTimeout(timer);this.toLocal()});
+    }catch(e){}
+  },
+  toLocal(){this.mode='local';this.col=null;this.sessions=this.readLocal();this.changed()},
+  /* Sessions, die vorher nur in diesem Browser lagen, einmalig ins Konto übernehmen */
+  async migrate(){
+    if(this.migrated||!this.col)return;this.migrated=true;
+    const local=this.readLocal();if(!local.length)return;
+    const have=new Set(this.sessions.map(s=>s.id)),left=[];
+    for(const s of local){
+      if(have.has(s.id))continue;
+      try{await this.col.doc(s.id).set(s)}catch(e){left.push(s)}
+    }
+    this.writeLocal(left);
+  },
+  async add(s){
+    if(this.mode==='cloud'&&this.col){
+      try{await this.col.doc(s.id).set(s);return 'cloud'}
+      catch(e){if(e&&(e.code==='invalid_argument'||e.code==='revoked'||e.code==='not_granted'))this.toLocal()}
+    }
+    const a=this.readLocal().filter(x=>x.id!==s.id);a.push(s);
+    const ok=this.writeLocal(a);
+    if(this.mode!=='cloud'){this.sessions=a;this.changed()}
+    return ok?'local':'none';
+  },
+  async remove(id){
+    if(this.mode==='cloud'&&this.col){try{await this.col.doc(id).delete();return true}catch(e){return false}}
+    const a=this.readLocal().filter(x=>x.id!==id);this.writeLocal(a);this.sessions=a;this.changed();return true;
+  }
+};
+
+/* ---------- Verlauf ---------- */
+let histAll=false,histConfirm=null,reportCtx=null;
+function renderHistory(){
+  $('storeMode').textContent=Store.mode==='cloud'?'In deinem Claude-Konto gespeichert':'In diesem Browser gespeichert';
+  const list=Store.sessions;
+  if(!list.length){$('histList').innerHTML='<p class="hempty">Noch keine gespeicherten Sessions. Nach deiner ersten Lerneinheit erscheint sie hier.</p>';$('exportBtn').hidden=true;return}
+  $('exportBtn').hidden=false;
+  const shown=histAll?list:list.slice(0,8);
+  let h='';
+  shown.forEach(s=>{
+    const m=summary(s),d=new Date(s.start);
+    const date=d.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'')+' · '+hm(s.start);
+    if(histConfirm===s.id){
+      h+='<div class="hrow"><div class="hconfirm"><span>Session vom '+esc(date)+' löschen?</span><div class="row"><button class="primary small warn" data-delyes="'+s.id+'">Löschen</button><button class="ghost small" data-delno>Abbrechen</button></div></div></div>';
+    }else{
+      h+='<div class="hrow"><button class="hopen" data-open="'+s.id+'"><span class="hdate">'+esc(date)+'</span><span class="hmeta"><b>'+dur(m.L)+'</b> · '+Math.round(m.ratio*100)+' % Fokus · Pomodori '+m.done+' von '+s.target+'</span></button><button class="hdel" data-del="'+s.id+'" aria-label="Session vom '+esc(date)+' löschen" title="Löschen">×</button></div>';
+    }
+  });
+  if(list.length>8)h+='<button class="textbtn" id="histMore" style="align-self:flex-start;margin-top:8px">'+(histAll?'Weniger anzeigen':'Alle '+list.length+' Sessions anzeigen')+'</button>';
+  $('histList').innerHTML=h;
+}
+$('histList').addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='histMore'){histAll=!histAll;renderHistory();return}
+  if(b.dataset.open){const s=Store.sessions.find(x=>x.id===b.dataset.open);if(s)report(s,false,'history');return}
+  if(b.dataset.del){histConfirm=b.dataset.del;renderHistory();const y=$('histList').querySelector('[data-delyes]');if(y)y.focus();return}
+  if('delno' in b.dataset){histConfirm=null;renderHistory();return}
+  if(b.dataset.delyes){const id=b.dataset.delyes;histConfirm=null;const ok=await Store.remove(id);$('histMsg').textContent=ok?'Session gelöscht.':'Löschen hat nicht geklappt. Versuch es gleich noch einmal.';renderHistory()}
+});
+
+/* Export & Import */
+$('exportBtn').onclick=async()=>{
+  const data=JSON.stringify({app:'lernfokus',version:1,exportedAt:new Date().toISOString(),sessions:Store.sessions},null,2);
+  const filename='lernfokus-sessions-'+dkey(Date.now())+'.json';
+  if(Store.dl){
+    try{await Store.dl.save({filename,data});$('histMsg').textContent='Export gespeichert ('+Store.sessions.length+' Sessions).';}
+    catch(e){$('histMsg').textContent=e&&e.code==='declined'?'Export abgebrochen.':'Export ist in dieser Ansicht gerade nicht möglich.'}
+    return;
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    $('histMsg').textContent='Export heruntergeladen ('+Store.sessions.length+' Sessions).';
+  }catch(e){$('histMsg').textContent='Export ist in dieser Ansicht nicht möglich.'}
+};
+$('importFile').onchange=async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  let arr;
+  try{const j=JSON.parse(await f.text());arr=Array.isArray(j)?j:j&&Array.isArray(j.sessions)?j.sessions:null}catch(err){arr=null}
+  if(!arr){$('histMsg').textContent='Die Datei ist kein Lernfokus-Export. Wähl eine JSON-Datei, die du hier exportiert hast.';return}
+  const have=new Set(Store.sessions.map(s=>s.id));let added=0,dupe=0,bad=0;
+  for(const raw of arr){
+    const s=cleanSession(raw);if(!s){bad++;continue}
+    if(have.has(s.id)){dupe++;continue}
+    const r=await Store.add(s);if(r==='none'){bad++;continue}
+    have.add(s.id);added++;
+  }
+  $('histMsg').textContent=added+(added===1?' Session':' Sessions')+' importiert'+(dupe?', '+dupe+(dupe===1?' war':' waren')+' schon vorhanden':'')+(bad?', '+bad+(bad===1?' ließ':' ließen')+' sich nicht lesen':'')+'.';
+};
+
+/* ---------- Statistik ---------- */
+let range='4w',statsSample=false;
+try{const r=localStorage.getItem('lernfokus-range');if(['4w','12w','all'].includes(r))range=r}catch(e){}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{range=b.dataset.range;try{localStorage.setItem('lernfokus-range',range)}catch(e){}renderStats()});
+$('navTimer').onclick=()=>{show('vSetup');renderSetup();window.scrollTo(0,0)};
+$('navStats').onclick=()=>{show('vStats');renderStats();window.scrollTo(0,0)};
+$('sampleOff').onclick=()=>{statsSample=false;renderStats()};
+let resizeT;addEventListener('resize',()=>{clearTimeout(resizeT);resizeT=setTimeout(()=>{if(!$('vStats').hidden)renderStats()},200)});
+
+function sampleSessions(){
+  let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const out=[],now=Date.now(),thisW=weekStart(now);
+  for(let w=10;w>=0;w--){
+    const ws=addDays(thisW,-7*w);
+    for(let d=0;d<7;d++){
+      if(rnd()>.42+(10-w)*.03+(d===1||d===3?.15:0)-(d>4?.2:0))continue;
+      const day=addDays(ws,d);
+      let t=day+(rnd()<.6?14+Math.floor(rnd()*3):9+Math.floor(rnd()*2))*3600000+Math.floor(rnd()*4)*900000;
+      if(t>now-3*3600000)continue;
+      const st=t,target=3+Math.floor(rnd()*4),n=Math.max(1,target-1+Math.floor(rnd()*2)),phases=[];
+      for(let i=0;i<n;i++){
+        const l=(21+rnd()*11)*60000;phases.push({type:'learn',start:t,end:t+l});t+=l;
+        if(i<n-1){const p=(4+rnd()*rnd()*(14-(10-w)*.6))*60000;phases.push({type:'pause',start:t,end:t+p});t+=p}
+      }
+      out.push({id:'x'+st,start:st,end:t,target,learnMin:25,pauseMin:5,phases,resets:rnd()<.15?1:0});
+    }
+  }
+  return out;
+}
+
+/* Lernzeit nach Tag, Stunde und Wochentag aufteilen */
+function aggregate(list){
+  const day={},dayP={},hour=Array(24).fill(0),wd=Array(7).fill(0);
+  list.forEach(s=>{
+    const m=summary(s);
+    m.learns.concat(m.pauses).forEach(p=>{
+      let a=p.start;
+      while(a<p.end){
+        const d=new Date(a),nx=new Date(a);nx.setMinutes(60,0,0);
+        const e=Math.min(p.end,nx.getTime()),ms=e-a,k=dkey(a);
+        if(p.type==='learn'){day[k]=(day[k]||0)+ms;hour[d.getHours()]+=ms;wd[(d.getDay()+6)%7]+=ms}
+        else dayP[k]=(dayP[k]||0)+ms;
+        a=e;
+      }
+    });
+  });
+  return {day,dayP,hour,wd};
+}
+function weekSum(map,ws){let s=0;for(let i=0;i<7;i++)s+=map[dkey(addDays(ws,i))]||0;return s}
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x)));const f=x/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+const TXT='font-size="11" fill="var(--muted)" font-family="Figtree,system-ui,sans-serif"';
+
+let chartW=560;
+function barSVG({vals,labels,titles,H=170,every=1,hi=-1,tops=false,aria}){
+  const W=chartW,pl=46,pr=6,pt=tops?18:10,pb=24,n=vals.length;
+  const max=Math.max(...vals,0),useH=max>=90*60000,u=useH?3600000:60000;
+  const step=niceStep(Math.max(max/u,useH?1:10)/4),top=Math.max(step,Math.ceil(max/u/step)*step);
+  const y=v=>pt+(H-pt-pb)*(1-v/top);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(aria)+'">';
+  for(let v=0;v<=top+1e-9;v+=step){
+    s+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+'" stroke="var(--line)"/>';
+    s+='<text x="'+(pl-8)+'" y="'+(y(v)+4).toFixed(1)+'" text-anchor="end" '+TXT+'>'+String(+v.toFixed(2)).replace('.',',')+(useH?' h':' min')+'</text>';
+  }
+  const cw=(W-pl-pr)/n,bw=Math.max(2,Math.min(30,cw*.66));
+  vals.forEach((v,i)=>{
+    const x=pl+cw*i+(cw-bw)/2,cx=x+bw/2;
+    if(v>0){
+      const yv=Math.min(y(v/u),y(0)-1.5);
+      s+='<rect x="'+x.toFixed(1)+'" y="'+yv.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(y(0)-yv).toFixed(1)+'" rx="'+Math.min(3,bw/3).toFixed(1)+'" fill="var(--learn)"><title>'+esc(titles[i]+': '+dur(v))+'</title></rect>';
+      if(tops)s+='<text x="'+cx.toFixed(1)+'" y="'+(yv-5).toFixed(1)+'" text-anchor="middle" '+TXT+'>'+short(v)+'</text>';
+    }
+    if(labels[i]&&(i===hi||(i%every===0&&(hi<0||Math.abs(i-hi)>=every))))s+='<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" '+TXT+(i===hi?' font-weight="600" style="fill:var(--ink)"':'')+'>'+esc(labels[i])+'</text>';
+  });
+  return s+'</svg>';
+}
+
+function heatSVG(dayMap,from,thisW,today){
+  const weeks=Math.round((thisW-from)/(7*DAY))+1,cs=13,g=3,pl=26,pt=18;
+  const W=pl+weeks*(cs+g),H=pt+7*(cs+g);
+  const max=Math.max(...Object.values(dayMap),1);
+  let s='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Lernzeit pro Tag als Kalender">';
+  [0,2,4].forEach(r=>s+='<text x="0" y="'+(pt+r*(cs+g)+10)+'" '+TXT+'>'+WDS[r]+'</text>');
+  let lastM=-1;
+  for(let w=0;w<weeks;w++){
+    const ws=addDays(from,7*w),mo=new Date(ws).getMonth();
+    if(mo!==lastM){s+='<text x="'+(pl+w*(cs+g))+'" y="11" '+TXT+'>'+new Date(ws).toLocaleDateString('de-DE',{month:'short'})+'</text>';lastM=mo}
+    for(let d=0;d<7;d++){
+      const t=addDays(ws,d);if(t>today)continue;
+      const v=dayMap[dkey(t)]||0,lvl=v?(v/max>.75?1:v/max>.5?.75:v/max>.25?.5:.3):0;
+      const tip=new Date(t).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'})+': '+(v?dur(v):'nicht gelernt');
+      s+='<rect x="'+(pl+w*(cs+g))+'" y="'+(pt+d*(cs+g))+'" width="'+cs+'" height="'+cs+'" rx="3" fill="'+(v?'var(--learn)':'var(--line)')+'"'+(v?' fill-opacity="'+lvl+'"':'')+(t===today?' stroke="var(--ink)" stroke-width="1.2"':'')+'><title>'+esc(tip)+'</title></rect>';
+    }
+  }
+  return s+'</svg>';
+}
+
+function lineSVG(pts,labels,hi){
+  const W=chartW,H=160,pl=46,pr=22,pt=14,pb=24,n=pts.length;
+  const vals=pts.filter(v=>v!=null),lo=Math.min(...vals)<.5?0:.5;
+  const x=i=>pl+(n===1?(W-pl-pr)/2:(W-pl-pr)*i/(n-1)),y=v=>pt+(H-pt-pb)*(1-(v-lo)/(1-lo));
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Fokusanteil pro Woche">';
+  for(let v=lo;v<=1.0001;v+=lo?.1:.25){s+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+'" stroke="var(--line)"/><text x="'+(pl-8)+'" y="'+(y(v)+4).toFixed(1)+'" text-anchor="end" '+TXT+'>'+Math.round(v*100)+' %</text>'}
+  let d='',area='',seg=[];
+  const flush=()=>{if(seg.length>1){area+='<path d="M'+seg[0][0]+' '+y(lo)+' L'+seg.map(p=>p.join(' ')).join(' L')+' L'+seg[seg.length-1][0]+' '+y(lo)+' Z" fill="var(--learn)" fill-opacity=".08"/>'}seg=[]};
+  pts.forEach((v,i)=>{if(v==null){flush();d+=' ';return}const P=[x(i).toFixed(1),y(v).toFixed(1)];d+=(seg.length?' L':' M')+P.join(' ');seg.push(P)});flush();
+  s+=area+'<path d="'+d.trim()+'" fill="none" stroke="var(--learn)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  let last=-1;pts.forEach((v,i)=>{if(v!=null)last=i});
+  pts.forEach((v,i)=>{if(v==null)return;s+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="'+(i===last?5:3)+'" fill="'+(i===last?'var(--learn)':'var(--surface)')+'" stroke="var(--learn)" stroke-width="2"><title>'+esc(labels[i]+': '+Math.round(v*100)+' %')+'</title></circle>'});
+  if(last>=0)s+='<text x="'+Math.min(x(last),W-pr-20).toFixed(1)+'" y="'+(y(pts[last])-10).toFixed(1)+'" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--ink)" font-family="Figtree,system-ui,sans-serif">'+Math.round(pts[last]*100)+' %</text>';
+  const every=Math.max(1,Math.ceil(n/Math.floor(W/50)));
+  labels.forEach((l,i)=>{if(i===hi||(i%every===0&&(hi<0||Math.abs(i-hi)>=every)))s+='<text x="'+x(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="'+(x(i)>W-30?'end':'middle')+'" '+TXT+(i===hi?' font-weight="600" style="fill:var(--ink)"':'')+'>'+esc(l)+'</text>'});
+  return s+'</svg>';
+}
+
+function delta(cur,prev,kind){
+  if(!prev)return '';
+  if(kind==='pct'){const p=Math.round((cur-prev)*100);return '<span class="chip'+(p<0?' down':p===0?' flat':'')+'">'+(p>0?'+':p<0?'−':'±')+Math.abs(p)+' Pkt.</span>'}
+  const m=Math.round((cur-prev)/60000);
+  return '<span class="chip'+(m<0?' down':m===0?' flat':'')+'">'+(m>0?'+':m<0?'−':'±')+short(Math.abs(cur-prev))+'</span>';
+}
+
+function renderStats(){
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.range===range)));
+  $('sampleBanner').hidden=!statsSample;
+  const all=statsSample?sampleSessions():Store.sessions,body=$('statsBody');
+  chartW=Math.max(300,Math.min(560,Math.round(body.clientWidth||560)));
+  if(!all.length){
+    body.innerHTML='<div class="empty"><h2>Hier entsteht deine Statistik</h2><p>Sobald du deine erste Lerneinheit beendest, siehst du hier, wie viel du pro Woche lernst, wie fokussiert du bist und zu welchen Zeiten du am besten lernst.</p><div class="row"><button class="primary small" id="emptyStart">Erste Session starten</button><button class="ghost small" id="emptySample">Mit Beispieldaten ansehen</button></div></div>';
+    $('emptyStart').onclick=()=>{show('vSetup');renderSetup()};
+    $('emptySample').onclick=()=>{statsSample=true;renderStats()};
+    return;
+  }
+  const now=Date.now(),today=dayStart(now),thisW=weekStart(now);
+  const first=Math.min(...all.map(s=>s.start));
+  const from=range==='4w'?addDays(thisW,-21):range==='12w'?addDays(thisW,-77):weekStart(first);
+  const inR=all.filter(s=>s.start>=from);
+  const A=aggregate(inR),G=aggregate(all);
+
+  // Streak über alle Sessions
+  let t=today;if(!G.day[dkey(t)])t=addDays(t,-1);
+  let streak=0;while(G.day[dkey(t)]){streak++;t=addDays(t,-1)}
+  const keys=Object.keys(G.day).sort();let best=0,run=0,prevK=null;
+  keys.forEach(k=>{const [y,m,d]=k.split('-').map(Number),tt=new Date(y,m-1,d).getTime();run=prevK!==null&&dkey(addDays(prevK,1))===k?run+1:1;best=Math.max(best,run);prevK=tt});
+
+  // Diese Woche / Vorwoche
+  const prevW=addDays(thisW,-7);
+  const wl=weekSum(G.day,thisW),wp=weekSum(G.dayP,thisW),pl=weekSum(G.day,prevW),pp=weekSum(G.dayP,prevW);
+  const wr=wl/((wl+wp)||1),pr=pl/((pl+pp)||1);
+
+  let h='';
+  if(!inR.length){
+    h+='<div class="empty"><h2>Keine Sessions in diesem Zeitraum</h2><p>In den letzten '+(range==='4w'?'4':'12')+' Wochen hast du keine Session gespeichert. Unter „Alles“ siehst du deine älteren Sessions.</p><button class="ghost small" id="toAll">Alles anzeigen</button></div>';
+  }else{
+    let L=0,P=0,done=0;inR.forEach(s=>{const m=summary(s);L+=m.L;P+=m.P;done+=m.done});
+    h+='<div class="kpis num">'+
+      '<div><span class="label">Lernzeit</span><strong style="color:var(--learn)">'+dur(L)+'</strong></div>'+
+      '<div><span class="label">Sessions</span><strong>'+inR.length+'</strong></div>'+
+      '<div><span class="label">Pomodori</span><strong>'+done+'</strong><small>geschafft</small></div>'+
+      '<div><span class="label">Ø pro Session</span><strong>'+dur(L/inR.length)+'</strong><small>Lernzeit</small></div>'+
+      '<div><span class="label">Ø Fokusanteil</span><strong>'+Math.round(L/((L+P)||1)*100)+' %</strong><small>Lernen an der Gesamtzeit</small></div>'+
+      '<div><span class="label">Lerntage in Folge</span><strong>'+streak+(streak===1?' Tag':' Tage')+'</strong><small>Rekord: '+best+(best===1?' Tag':' Tage')+'</small></div>'+
+    '</div>';
+
+    h+='<section><h2>Diese Woche</h2><div class="compare num">'+
+      '<div><span class="label">Lernzeit</span><strong>'+dur(wl)+delta(wl,pl)+'</strong><small>Vorwoche: '+(pl?dur(pl):'keine Sessions')+'</small></div>'+
+      '<div><span class="label">Fokusanteil</span><strong>'+(wl?Math.round(wr*100)+' %':'–')+(wl?delta(wr,pl?pr:0,'pct'):'')+'</strong><small>Vorwoche: '+(pl?Math.round(pr*100)+' %':'keine Sessions')+'</small></div>'+
+    '</div></section>';
+
+    // Wochen
+    const nW=Math.round((thisW-from)/(7*DAY))+1,wv=[],wlab=[],wtit=[],fr=[];
+    for(let i=0;i<nW;i++){const ws=addDays(from,7*i),l=weekSum(A.day,ws),p=weekSum(A.dayP,ws);wv.push(l);wlab.push('KW '+isoWeek(ws));wtit.push('KW '+isoWeek(ws)+' ('+new Date(ws).toLocaleDateString('de-DE',{day:'numeric',month:'numeric'})+')');fr.push(l?l/(l+p):null)}
+    h+='<section><h2>Lernzeit pro Woche</h2><div class="chartbox">'+barSVG({vals:wv,labels:wlab,titles:wtit,every:Math.max(1,Math.ceil(nW/Math.floor(chartW/50))),hi:nW-1,tops:nW<=Math.floor(chartW/40),aria:'Lernzeit pro Woche'})+'</div><p class="note">Die letzte Woche läuft noch.</p></section>';
+
+    // Tage
+    if(range==='4w'){
+      const dv=[],dl=[],dt=[];
+      for(let i=0;i<28;i++){const t2=addDays(from,i);if(t2>today)break;dv.push(A.day[dkey(t2)]||0);const dd=new Date(t2);dl.push(dd.getDay()===1?dd.getDate()+'.'+(dd.getMonth()+1)+'.':'');dt.push(dd.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'}))}
+      h+='<section><h2>Lernzeit pro Tag</h2><div class="chartbox">'+barSVG({vals:dv,labels:dl,titles:dt,H:150,hi:-1,aria:'Lernzeit pro Tag'})+'</div><p class="note">Beschriftet sind die Montage.</p></section>';
+    }else{
+      h+='<section><h2>Lernzeit pro Tag</h2><div class="chartbox heat">'+heatSVG(A.day,from,thisW,today)+'</div><div class="legend"><span style="--c:var(--line)">nicht gelernt</span><span style="--c:var(--learn)">je dunkler, desto länger</span></div></section>';
+    }
+
+    // Fokusverlauf
+    const withData=fr.filter(v=>v!=null).length;
+    h+='<section><h2>Fokusanteil pro Woche</h2>'+(withData>=2?'<div class="chartbox">'+lineSVG(fr,wlab,nW-1)+'</div><p class="note">Anteil der Lernzeit an Lernen plus Pausen. Wochen ohne Session bleiben leer.</p>':'<p class="note">Der Verlauf erscheint, sobald du in mindestens zwei Wochen gelernt hast.</p>')+'</section>';
+
+    // Wann
+    const tot=A.wd.reduce((a,b)=>a+b,0);
+    let topD=0;A.wd.forEach((v,i)=>{if(v>A.wd[topD])topD=i});
+    let topH=0,bestSum=-1;for(let i=0;i<=21;i++){const sm=A.hour[i]+A.hour[i+1]+A.hour[i+2];if(sm>bestSum){bestSum=sm;topH=i}}
+    const adv=['montags','dienstags','mittwochs','donnerstags','freitags','samstags','sonntags'];
+    h+='<section><h2>Wann du lernst</h2>'+(tot?'<p class="note" style="color:var(--ink)">Am meisten lernst du '+adv[topD]+' und zwischen '+topH+' und '+(topH+3)+' Uhr.</p>':'')+
+      '<div class="sub2"><span class="label">Nach Wochentag</span><div class="chartbox">'+barSVG({vals:A.wd,labels:WDS,titles:WD,H:140,hi:topD,aria:'Lernzeit nach Wochentag'})+'</div></div>'+
+      '<div class="sub2"><span class="label">Nach Uhrzeit</span><div class="chartbox">'+barSVG({vals:A.hour,labels:A.hour.map((_,i)=>i+' Uhr'),titles:A.hour.map((_,i)=>i+'–'+(i+1)+' Uhr'),H:140,every:chartW<420?4:3,aria:'Lernzeit nach Uhrzeit'})+'</div></div>'+
+      (inR.length<3?'<p class="note">Mit mehr Sessions werden diese Muster aussagekräftiger.</p>':'')+
+    '</section>';
+  }
+  body.innerHTML=h;
+  const ta=$('toAll');if(ta)ta.onclick=()=>{range='all';renderStats()};
+}
+
 /* ---------- Auswertung ---------- */
-function report(D,sample){
-  S=null;show('vReport');window.scrollTo(0,0);
+function report(D,sample,ctx){
+  S=null;show('vReport');window.scrollTo(0,0);reportCtx=ctx||null;
+  $('newBtn').textContent=ctx==='history'?'Zurück':'Neue Session';
   $('sampleNote').hidden=!sample;
   const lp=D.learnMin*60000,pp=D.pauseMin*60000;
   const learns=D.phases.filter(p=>p.type==='learn'&&p.end-p.start>=30000);
@@ -538,13 +982,15 @@ function report(D,sample){
   $('facts').innerHTML=facts.map(([a,b])=>'<dt>'+a+'</dt><dd>'+b+'</dd>').join('');
 }
 
-$('newBtn').onclick=()=>{S=null;show('vSetup');renderSetup();window.scrollTo(0,0)};
+$('newBtn').onclick=()=>{S=null;show('vSetup');renderSetup();if(reportCtx==='history')$('histSec').scrollIntoView({block:'start'});else window.scrollTo(0,0)};
 $('sampleBtn').onclick=()=>{
   const m=60000,st=new Date();st.setHours(14,10,0,0);let t=st.getTime();
   const seq=[['learn',22],['pause',5],['learn',27],['pause',9],['learn',20],['pause',6],['learn',31],['pause',14],['learn',18],['pause',5],['learn',21]];
   const phases=seq.map(([type,min])=>{const p={type,start:t,end:t+min*m};t+=min*m;return p});
   report({target:6,learnMin:20,pauseMin:5,start:st.getTime(),end:t,phases},true);
 };
+
+Store.init();
 
 /* ---------- Wiederaufnahme nach Neuladen ---------- */
 const saved=load();
