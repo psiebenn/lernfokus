@@ -183,6 +183,7 @@ dl.facts dd{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <div class="row" style="justify-content:center;gap:24px">
       <button class="textbtn" id="resetBtn">Pomodoro neu starten</button>
+      <button class="textbtn" id="miniBtn" hidden>Mini-Fenster</button>
       <button class="textbtn" id="endBtn">Session beenden</button>
     </div>
     <div class="kbd"><kbd>Leertaste</kbd> wechselt die Phase</div>
@@ -315,7 +316,56 @@ function tick(){
   $('tLearn').textContent=dur(L);$('tPause').textContent=dur(P);
   const flash=!$('popup').hidden&&Math.floor(now/1000)%2===0;
   document.title=flash?(c.type==='learn'?'● Pause machen!':'● Weiter lernen!'):(over?'+':'')+clock(over?-rem:rem+999)+' · '+(c.type==='learn'?'Lernen':'Pause');
+  if(pip){
+    const d=pip.document,mc=d.getElementById('mClock');
+    if(mc){
+      d.body.dataset.phase=c.type;
+      d.body.classList.toggle('alert',over);
+      d.getElementById('mPhase').textContent=c.type==='learn'?'Lernen':'Pause';
+      d.getElementById('mCount').textContent=(c.type==='learn'?learnBlocks:done)+' / '+S.target;
+      mc.textContent=(over?'+':'')+clock(over?-rem:rem+999);
+      mc.classList.toggle('over',over);
+      d.getElementById('mBar').style.width=Math.min(100,el/pl*100)+'%';
+      d.getElementById('mBtn').textContent=c.type==='learn'?'Pause machen':'Weiter lernen';
+      d.title=document.title;
+    }
+  }
 }
+
+/* ---------- Mini-Fenster (Bild-im-Bild, Chrome) ---------- */
+let pip=null;
+const MINI_CSS=`
+html,body{height:100%}
+body{padding:0!important;margin:0;display:flex;background:var(--bg);color:var(--ink);overflow:hidden}
+.mini{flex:1;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:3px solid transparent;transition:background-color .4s}
+body.alert .mini{animation:alert 1.6s ease-in-out infinite}
+@keyframes alert{50%{border-color:var(--phase);background:var(--phase-soft)}}
+.mtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mphase{font-family:var(--f-display);font-size:1.3rem;color:var(--phase);line-height:1}
+.mcount{font-size:.75rem;color:var(--muted)}
+.mclock{font-size:clamp(2rem,21vw,3.6rem);font-weight:300;line-height:1;letter-spacing:-.02em}
+.mclock.over{color:var(--phase)}
+.mbar{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.mbar i{display:block;height:100%;background:var(--phase);width:0;transition:width .3s linear}
+.mbtn{margin-top:auto;border:0;border-radius:999px;background:var(--phase);color:var(--bg);padding:9px 12px;font:inherit;font-weight:600;font-size:.85rem;cursor:pointer}
+.mbtn:focus-visible{outline:2px solid var(--phase);outline-offset:2px}
+`;
+async function toggleMini(){
+  if(pip){pip.close();return}
+  try{pip=await documentPictureInPicture.requestWindow({width:240,height:190})}
+  catch(e){pip=null;$('nudge').textContent='Das Mini-Fenster lässt sich hier nicht öffnen. Es funktioniert in Chrome.';return}
+  const d=pip.document;
+  document.querySelectorAll('link[rel=stylesheet]').forEach(l=>d.head.appendChild(l.cloneNode()));
+  const st=d.createElement('style');st.textContent=document.querySelector('style').textContent+MINI_CSS;d.head.appendChild(st);
+  d.body.innerHTML='<div class="mini"><div class="mtop"><span class="mphase" id="mPhase">Lernen</span><span class="mcount num" id="mCount"></span></div><div class="mclock num" id="mClock">--:--</div><div class="mbar"><i id="mBar"></i></div><button class="mbtn" id="mBtn">Pause machen</button></div>';
+  d.getElementById('mBtn').onclick=switchPhase;
+  d.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='BUTTON'){e.preventDefault();switchPhase()}});
+  pip.addEventListener('pagehide',()=>{pip=null;$('miniBtn').textContent='Mini-Fenster'});
+  $('miniBtn').textContent='Mini-Fenster schließen';
+  tick();
+}
+$('miniBtn').hidden=!('documentPictureInPicture' in window);
+$('miniBtn').onclick=toggleMini;
 
 function openPopup(type){
   const learn=type==='learn';
@@ -359,7 +409,7 @@ $('confirmNo').onclick=()=>{$('confirm').hidden=true};
 $('confirmYes').onclick=()=>{
   const now=Date.now();
   S.phases.push({type:S.cur.type,start:S.cur.start,end:now});
-  S.end=now;clearInterval(timer);clear();closePopup();
+  S.end=now;clearInterval(timer);clear();closePopup();if(pip)pip.close();
   document.title='Lernfokus';delete document.body.dataset.phase;
   report(S,false);
 };
